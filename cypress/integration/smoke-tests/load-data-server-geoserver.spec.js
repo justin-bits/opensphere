@@ -4,6 +4,18 @@ var os = require('../../support/selectors.js');
 describe('Add GeoServer', function() {
   before('Login', function() {
     cy.login();
+    cy.server();
+    cy.route('**/geoserver/ows', 'fx:/smoke-tests/load-data-server-geoserver/ows.stub.xml')
+        .as('connectToServer');
+    cy.route('**/geoserver/ows?service=WMS&request=GetCapabilities&version=1.3.0',
+        'fx:/smoke-tests/load-data-server-geoserver/wms.stub.xml')
+        .as('WMS');
+    cy.route('**/geoserver/ows?service=WFS&request=GetCapabilities',
+        'fx:/smoke-tests/load-data-server-geoserver/wfs.stub.xml')
+        .as('WFS');
+    cy.route('**/geoserver/wfs?SERVICE=WFS&VERSION=1.1.0&TYPENAME=OSDS:VIIRS_Detection&REQUEST=DescribeFeatureType',
+        'fx:/smoke-tests/load-data-server-geoserver/add-layer.stub.xml')
+        .as('Add VIIRS Layer');
   });
 
   it('Load data from GeoServer', function() {
@@ -13,6 +25,7 @@ describe('Add GeoServer', function() {
     cy.get(os.importURLDialog.ENTER_A_URL_INPUT)
         .type('https://gdp-geoserver.dev.dev.east.paas.geointservices.io/geoserver/ows');
     cy.get(os.importURLDialog.NEXT_BUTTON).click();
+    cy.get(os.addGeoServerDialog.TITLE_INPUT).should('be.visible');
     cy.get(os.addGeoServerDialog.TITLE_INPUT).clear();
     cy.get(os.addGeoServerDialog.TITLE_INPUT).type('GDP GeoServer');
     cy.get(os.addGeoServerDialog.SAVE_BUTTON).click();
@@ -46,7 +59,7 @@ describe('Add GeoServer', function() {
     cy.get(os.layersDialog.Tabs.Layers.Tree.Type.featureLayer.Server.contextMenu.menuOptions.MOST_RECENT).click();
     cy.get(os.layersDialog.Tabs.Areas.TAB).click();
     cy.get(os.layersDialog.Tabs.Areas.Import.BUTTON).click();
-    cy.upload('smoke-tests/load-data-server-geoserver-test-area.geojson');
+    cy.upload('smoke-tests/load-data-server-geoserver/test-area.geojson');
     cy.get(os.importDataDialog.NEXT_BUTTON).click();
     cy.get(os.geoJSONAreaImportDialog.Tabs.areaOptions.TITLE_COLUMN_INPUT).should('be.visible');
     cy.get(os.geoJSONAreaImportDialog.DONE_BUTTON).click();
@@ -68,57 +81,57 @@ describe('Add GeoServer', function() {
         .invoke('text')
         .should('match', /\([1-9]\d{0,3}\)/); // Any number 1-9999, surrounded by ()
 
-    // Open the timeline and animate the data (view window animates)
-    cy.get(os.Toolbar.TIMELINE_TOGGLE_BUTTON).click();
-    cy.get(os.Timeline.PANEL).should('be.visible');
-    cy.get(os.Timeline.HISTOGRAM_POINTS).should('be.visible');
-    cy.get(os.Timeline.VIEW_WINDOW).invoke('position').then(function(elementPosition) {
-      cy.get(os.Timeline.PLAY_BUTTON).click();
-      cy.get(os.Timeline.VIEW_WINDOW).invoke('position').should('not.equal', elementPosition);
-    });
-    cy.get(os.Toolbar.TIMELINE_TOGGLE_BUTTON).click();
-    cy.get(os.Timeline.PANEL).should('not.exist');
+    // // Open the timeline and animate the data (view window animates)
+    // cy.get(os.Toolbar.TIMELINE_TOGGLE).click();
+    // cy.get(os.Timeline.PANEL).should('be.visible');
+    // cy.get(os.Timeline.HISTOGRAM_POINTS).should('be.visible');
+    // cy.get(os.Timeline.VIEW_WINDOW).invoke('position').then(function(elementPosition) {
+    //   cy.get(os.Timeline.PLAY_BUTTON).click();
+    //   cy.get(os.Timeline.VIEW_WINDOW).invoke('position').should('not.equal', elementPosition);
+    // });
+    // cy.get(os.Toolbar.TIMELINE_TOGGLE).click();
+    // cy.get(os.Timeline.PANEL).should('not.exist');
 
-    // Open the timeline and animate the data (feature count changes)
-    cy.get(os.layersDialog.Tabs.Layers.Tree.LAYER_4)
-        .find(os.layersDialog.Tabs.Layers.Tree.Type.featureLayer.FEATURE_COUNT_TEXT_WILDCARD)
-        .invoke('text')
-        .then(function(featureCount) {
-          cy.get(os.Toolbar.TIMELINE_TOGGLE_BUTTON).click();
-          cy.get(os.Timeline.PANEL).should('be.visible');
-          cy.get(os.Timeline.PLAY_BUTTON).click();
-          cy.get(os.Timeline.PAUSE_BUTTON).click();
-          cy.get(os.layersDialog.Tabs.Layers.Tree.LAYER_4)
-              .find(os.layersDialog.Tabs.Layers.Tree.Type.featureLayer.FEATURE_COUNT_TEXT_WILDCARD)
-              .invoke('text')
-              .should('match', new RegExp('\\([0-9]\\d{0,3}\\/' + featureCount + '\\)'));
-        });
+    // // Open the timeline and animate the data (feature count changes)
+    // cy.get(os.layersDialog.Layers.Tree.LAYER_4)
+    //     .find(os.layersDialog.Layers.Tree.LAYER_FEATURE_COUNT)
+    //     .invoke('text')
+    //     .then(function(featureCount) {
+    //       cy.get(os.Toolbar.TIMELINE_TOGGLE).click();
+    //       cy.get(os.Timeline.PANEL).should('be.visible');
+    //       cy.get(os.Timeline.PLAY_BUTTON).click();
+    //       cy.get(os.Timeline.PAUSE_BUTTON).click();
+    //       cy.get(os.layersDialog.Layers.Tree.LAYER_4)
+    //           .find(os.layersDialog.Layers.Tree.LAYER_FEATURE_COUNT)
+    //           .invoke('text')
+    //           .should('match', new RegExp('\\([0-9]\\d{0,3}\\/' + featureCount + '\\)'));
+    //     });
 
-    // Clean up
-    cy.get(os.Toolbar.TIMELINE_TOGGLE_BUTTON).click();
-    cy.get(os.Timeline.PANEL).should('not.exist');
-    cy.get(os.layersDialog.Tabs.Layers.Tree.LAYER_4)
-        .find(os.layersDialog.Tabs.Layers.Tree.Type.featureLayer.FEATURE_COUNT_TEXT_WILDCARD)
-        .invoke('text')
-        .should('match', /\([1-9]\d{0,3}\)/); // Any number 1-9999, surrounded by ()
-    cy.get(os.layersDialog.Tabs.Layers.Tree.LAYER_4).click();
-    cy.get(os.layersDialog.Tabs.Layers.Tree.LAYER_4)
-        .find(os.layersDialog.Tabs.Layers.Tree.Type.featureLayer.REMOVE_LAYER_BUTTON_WILDCARD)
-        .click();
-    cy.get(os.layersDialog.Tabs.Layers.Tree.LAYER_4)
-        .should('not.contain', 'VIIRS Detection Features');
-    cy.get(os.layersDialog.Tabs.Areas.TAB).click();
-    cy.get(os.layersDialog.Tabs.Areas.Tree.AREA_1).click();
-    cy.get(os.layersDialog.Tabs.Areas.Tree.AREA_1)
-        .find(os.layersDialog.Tabs.Areas.Tree.REMOVE_AREA_BUTTON_WILDCARD)
-        .click();
-    cy.get(os.layersDialog.Tabs.Areas.Tree.AREA_1).should('not.contain', 'temp area 1');
-    cy.get(os.layersDialog.Tabs.Layers.TAB).click();
-    cy.get(os.statusBar.SERVERS_BUTTON).click();
-    cy.get(os.settingsDialog.Tabs.dataServers.SERVER_1)
-        .find(os.settingsDialog.Tabs.dataServers.DELETE_SERVER_BUTTON_WILDCARD).click();
-    cy.get(os.settingsDialog.Tabs.dataServers.SERVER_1)
-        .should('not.contain', 'GDP GeoServer');
-    cy.get(os.settingsDialog.CLOSE_BUTTON).click();
+    // // Clean up
+    // cy.get(os.Toolbar.TIMELINE_TOGGLE).click();
+    // cy.get(os.Timeline.PANEL).should('not.exist');
+    // cy.get(os.layersDialog.Layers.Tree.LAYER_4)
+    //     .find(os.layersDialog.Layers.Tree.LAYER_FEATURE_COUNT)
+    //     .invoke('text')
+    //     .should('match', /\([1-9]\d{0,3}\)/); // Any number 1-9999, surrounded by ()
+    // cy.get(os.layersDialog.Layers.Tree.LAYER_4).click();
+    // cy.get(os.layersDialog.Layers.Tree.LAYER_4)
+    //     .find(os.layersDialog.Layers.Tree.REMOVE_LAYER)
+    //     .click();
+    // cy.get(os.layersDialog.Layers.Tree.LAYER_4)
+    //     .should('not.contain', 'VIIRS Detection Features');
+    // cy.get(os.layersDialog.AREAS_TAB).click();
+    // cy.get(os.layersDialog.Areas.Tree.AREA_1).click();
+    // cy.get(os.layersDialog.Areas.Tree.AREA_1)
+    //     .find(os.layersDialog.Areas.Tree.REMOVE_AREA)
+    //     .click();
+    // cy.get(os.layersDialog.Areas.Tree.AREA_1).should('not.contain', 'temp area 1');
+    // cy.get(os.layersDialog.LAYERS_TAB).click();
+    // cy.get(os.statusBar.SERVERS_BUTTON).click();
+    // cy.get(os.settingsDialog.Panel.dataServers.SERVER_1)
+    //     .find(os.settingsDialog.Panel.dataServers.DELETE_SERVER).click();
+    // cy.get(os.settingsDialog.Panel.dataServers.SERVER_1)
+    //     .should('not.contain', 'GDP GeoServer');
+    // cy.get(os.settingsDialog.CLOSE_BUTTON).click();
   });
 });
