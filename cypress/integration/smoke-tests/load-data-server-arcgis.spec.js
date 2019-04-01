@@ -4,6 +4,24 @@ var os = require('../../support/selectors.js');
 describe('Add ARCGIS server', function() {
   before('Login', function() {
     cy.login();
+    cy.server();
+    cy.route('**/OpenData/MapServer', 'fx:/smoke-tests/load-data-server-arcgis/mapserver.stub.xml')
+        .as('Connect to server');
+    cy.route('**/OpenData/MapServer?f=json', 'fx:/smoke-tests/load-data-server-arcgis/mapserver?f=json.stub.json')
+        .as('Get layers');
+    cy.route('**/OpenData/MapServer/layers?f=json', 'fx:/smoke-tests/load-data-server-arcgis/layers?f=json.stub.json')
+        .as('Get layer details');
+    cy.route('**/OpenData/MapServer/export?f=image**', 'fx:/smoke-tests/load-data-server-arcgis/export.png')
+        .as('Turn on layer');
+    // cy.route('**/OpenData/MapServer/query', getFeaturesResponse)
+    //     .as('Get features');
+
+    // getFeaturesResponse(function(route) {
+    //   // routeData is a reference to the current route's information
+    //   return {
+    //     data: someOtherFunction(route)
+    //   };
+    // });
   });
 
   it('Load data from ARCGIS server', function() {
@@ -16,6 +34,7 @@ describe('Add ARCGIS server', function() {
     cy.get(os.addArcServerDialog.TITLE_INPUT).clear();
     cy.get(os.addArcServerDialog.TITLE_INPUT).type('Aurora ArcGIS Server');
     cy.get(os.addArcServerDialog.SAVE_BUTTON).click();
+    cy.wait(2000); // TODO: Remove this
     cy.get(os.settingsDialog.Tabs.dataServers.SERVER_1)
         .should('contain', 'Aurora ArcGIS Server');
     cy.get(os.settingsDialog.Tabs.dataServers.SERVER_1)
@@ -41,7 +60,7 @@ describe('Add ARCGIS server', function() {
     // Import and activate a query area
     cy.get(os.layersDialog.Tabs.Areas.TAB).click();
     cy.get(os.layersDialog.Tabs.Areas.Import.BUTTON).click();
-    cy.upload('smoke-tests/load-data-server-arcgis-test-area.geojson');
+    cy.upload('smoke-tests/load-data-server-arcgis/test-area.geojson');
     cy.get(os.importDataDialog.NEXT_BUTTON).click();
     cy.get(os.geoJSONAreaImportDialog.Tabs.areaOptions.TITLE_COLUMN_INPUT).should('be.visible');
     cy.get(os.geoJSONAreaImportDialog.DONE_BUTTON).click();

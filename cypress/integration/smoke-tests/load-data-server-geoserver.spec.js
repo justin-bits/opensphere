@@ -6,19 +6,19 @@ describe('Add GeoServer', function() {
     cy.login();
     cy.server();
     cy.route('**/geoserver/ows', 'fx:/smoke-tests/load-data-server-geoserver/ows.stub.xml')
-        .as('connectToServer');
-    cy.route('**/geoserver/ows?service=WMS&request=GetCapabilities&version=1.3.0',
-        'fx:/smoke-tests/load-data-server-geoserver/wms.stub.xml')
-        .as('WMS');
-    cy.route('**/geoserver/ows?service=WFS&request=GetCapabilities',
-        'fx:/smoke-tests/load-data-server-geoserver/wfs.stub.xml')
-        .as('WFS');
-    cy.route('**/geoserver/wfs?SERVICE=WFS&VERSION=1.1.0&TYPENAME=OSDS:VIIRS_Detection&REQUEST=DescribeFeatureType',
-        'fx:/smoke-tests/load-data-server-geoserver/add-layer.stub.xml')
-        .as('Add VIIRS Layer');
+        .as('Connect to server');
+    cy.route('**/geoserver/ows?service=WMS**',
+        'fx:/smoke-tests/load-data-server-geoserver/ows?service=wms.stub.xml')
+        .as('Get WMS capabilities');
+    cy.route('**/geoserver/ows?service=WFS**',
+        'fx:/smoke-tests/load-data-server-geoserver/ows?service=wfs.stub.xml')
+        .as('Get WFS capabilities');
+    cy.route('**/geoserver/wfs?SERVICE=WFS**',
+        'fx:/smoke-tests/load-data-server-geoserver/wfs?service=wfs.stub.xml')
+        .as('Add data Layer');
     cy.route('POST', '**/geoserver/wfs',
-        'fx:/smoke-tests/load-data-server-geoserver/query-layer.stub.xml')
-        .as('Query VIIRS Layer');
+        'fx:/smoke-tests/load-data-server-geoserver/wfs.stub.xml')
+        .as('Query data Layer');
   });
 
   it('Load data from GeoServer', function() {
